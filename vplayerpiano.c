@@ -18,18 +18,21 @@
 #include <SDL.h>
 #include <stdio.h>
 
-typedef struct Keyboard {
-  int key_width = 9; //width (including gap) of a white key in pixels
+#define DEFAULT_KEY_WIDTH 9
+
+typedef struct {
+  int key_width; //width (including gap) of a white key in pixels
   int key_height; //determined relative to the width
   int key_states[88];
   SDL_Rect key_rects[88];
-};
+} Keyboard;
 
-void keyboard_init(Keyboard * kbd, SDL_Surface * out);
+void keyboard_init(Keyboard * kbd);
 
 void gen_key_rects(Keyboard * kbd);
 
-void keyboard_init(Keyboard * kbd, SDL_Surface * out){
+void keyboard_init(Keyboard * kbd){
+  kbd->key_width = DEFAULT_KEY_WIDTH;
   kbd->key_height = 6 * kbd->key_width;
   for (int i = 0; i < 88; i++){
       kbd->key_states[i] = 0;
@@ -40,8 +43,8 @@ void keyboard_init(Keyboard * kbd, SDL_Surface * out){
 
 void gen_key_rects(Keyboard * kbd){
   int offset = 0;
-  int black_width = 2 / 3 * key_width;
-  int black_height = 2 / 3 * key_height;
+  int black_width = 2 / 3 * kbd->key_width;
+  int black_height = 2 / 3 * kbd->key_height;
 
   for (int i = 0; i < 88; i++){
     if (i % 12 == 1 || i % 12 == 6){ //Bb and Eb
@@ -67,4 +70,13 @@ void gen_key_rects(Keyboard * kbd){
       offset += kbd->key_width;
     }
   }
+}
+
+int main(){
+  Keyboard kbd;
+  
+  keyboard_init(&kbd);
+  
+  printf("Hello\n\n");
+  return 0;
 }
