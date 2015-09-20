@@ -16,59 +16,55 @@
  */
 
 #include <SDL.h>
-#include <iostream>
+#include <stdio.h>
 
-
-class Keyboard
-{
-public:
-  Keyboard(SDL_Surface * out);
-
-private:
-  void genKeyRects();
-
+typedef struct Keyboard {
   int key_width = 9; //width (including gap) of a white key in pixels
   int key_height; //determined relative to the width
-  bool key_states[88];
+  int key_states[88];
   SDL_Rect key_rects[88];
 };
 
+void keyboard_init(Keyboard * kbd, SDL_Surface * out);
 
-Keyboard::Keyboard(SDL_Surface * out) : key_height(6 * key_width){
-  for (bool &key : key_states){
-    key = false;
+void gen_key_rects(Keyboard * kbd);
+
+void keyboard_init(Keyboard * kbd, SDL_Surface * out){
+  kbd->key_height = 6 * kbd->key_width;
+  for (int i = 0; i < 88; i++){
+      kbd->key_states[i] = 0;
   }
 
-  genKeyRects();
+  gen_key_rects(kbd);
 }
 
-void Keyboard::genKeyRects(){
+void gen_key_rects(Keyboard * kbd){
   int offset = 0;
   int black_width = 2 / 3 * key_width;
   int black_height = 2 / 3 * key_height;
 
   for (int i = 0; i < 88; i++){
     if (i % 12 == 1 || i % 12 == 6){ //Bb and Eb
-      key_rects[i].h = black_height;
-      key_rects[i].w = black_width;
-      key_rects[i].x = offset - key_width / 6;
-      key_rects[i].y = 0;
+      kbd->key_rects[i].h = black_height;
+      kbd->key_rects[i].w = black_width;
+      kbd->key_rects[i].x = offset - kbd->key_width / 6;
+      kbd->key_rects[i].y = 0;
     } else if (i % 12 == 4 || i % 12 == 9){ //Db and Gb
-      key_rects[i].h = black_height;
-      key_rects[i].w = black_width;
-      key_rects[i].x = offset - 1 / 2 * key_width;
-      key_rects[i].y = 0;
+      kbd->key_rects[i].h = black_height;
+      kbd->key_rects[i].w = black_width;
+      kbd->key_rects[i].x = offset - 1 / 2 * kbd->key_width;
+      kbd->key_rects[i].y = 0;
     } else if (i % 12 == 11){ //Ab
-      key_rects[i].h = black_height;
-      key_rects[i].w = black_width;
-      key_rects[i].x = offset - 1 / 3 * key_width;
-      key_rects[i].y = 0;
+      kbd->key_rects[i].h = black_height;
+      kbd->key_rects[i].w = black_width;
+      kbd->key_rects[i].x = offset - 1 / 3 * kbd->key_width;
+      kbd->key_rects[i].y = 0;
     } else { //white notes
-      key_rects[i].h = key_height;
-      key_rects[i].w = key_width - 2;
-      key_rects[i].x = offset + 1;
-      key_rects[i].y = 0;
-      offset += key_width;
+      kbd->key_rects[i].h = kbd->key_height;
+      kbd->key_rects[i].w = kbd->key_width - 2;
+      kbd->key_rects[i].x = offset + 1;
+      kbd->key_rects[i].y = 0;
+      offset += kbd->key_width;
     }
   }
 }
