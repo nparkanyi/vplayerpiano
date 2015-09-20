@@ -18,7 +18,7 @@
 #include <SDL.h>
 #include <stdio.h>
 
-#define DEFAULT_KEY_WIDTH 9
+#define DEFAULT_KEY_WIDTH 14
 
 typedef struct {
   int key_width; //width (including gap) of a white key in pixels
@@ -86,8 +86,20 @@ int main(){
     printf("Failed to open window!\n");
   }
   
-  printf("Hello\n\n");
+  screen = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
+  if (!screen){
+    printf("Failed to initialize renderer!\n");
+  }
   
+  //draw keyboard
+  SDL_SetRenderDrawColor(screen, 0, 0, 0, 255);
+  SDL_RenderClear(screen);
+  SDL_SetRenderDrawColor(screen, 255, 255, 255, 255);
+  SDL_RenderFillRects(screen, kbd.key_rects, 88);
+  SDL_RenderPresent(screen);
+  SDL_Delay(6000);
+  
+  SDL_DestroyRenderer(screen);
   SDL_DestroyWindow(win);
   SDL_Quit();
   return 0;
