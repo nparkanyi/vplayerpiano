@@ -28,8 +28,8 @@ typedef struct {
 } Keyboard;
 
 void keyboard_init(Keyboard * kbd);
-
 void gen_key_rects(Keyboard * kbd);
+int is_black_key(int i);
 
 void keyboard_init(Keyboard * kbd){
   kbd->key_width = DEFAULT_KEY_WIDTH;
@@ -43,8 +43,8 @@ void keyboard_init(Keyboard * kbd){
 
 void gen_key_rects(Keyboard * kbd){
   int offset = 0;
-  int black_width = 2 / 3 * kbd->key_width;
-  int black_height = 2 / 3 * kbd->key_height;
+  int black_width = (2 * kbd->key_width) / 3;
+  int black_height = (2 * kbd->key_height) / 3;
 
   for (int i = 0; i < 88; i++){
     if (i % 12 == 1 || i % 12 == 6){ //Bb and Eb
@@ -72,6 +72,11 @@ void gen_key_rects(Keyboard * kbd){
   }
 }
 
+int is_black_key(int i){
+  return (i % 12 == 1 || i % 12 == 4 || i % 12 == 6 || i % 12 == 9
+      || i % 12 == 11);
+}
+
 int main(){
   SDL_Window * win;
   SDL_Renderer * screen;
@@ -92,10 +97,20 @@ int main(){
   }
   
   //draw keyboard
-  SDL_SetRenderDrawColor(screen, 0, 0, 0, 255);
+  SDL_SetRenderDrawColor(screen, 100, 100, 100, 255);
   SDL_RenderClear(screen);
-  SDL_SetRenderDrawColor(screen, 255, 255, 255, 255);
-  SDL_RenderFillRects(screen, kbd.key_rects, 88);
+  for (int i = 0; i < 88; i++){
+    if (!is_black_key(i)){
+      SDL_SetRenderDrawColor(screen, 255, 255, 255, 255);
+      SDL_RenderFillRect(screen, &kbd.key_rects[i]);
+    }
+  }
+  for (int i = 0; i < 88; i++){
+    if (is_black_key(i)){
+      SDL_SetRenderDrawColor(screen, 0, 0, 0, 255);
+      SDL_RenderFillRect(screen, &kbd.key_rects[i]);
+    }
+  }
   SDL_RenderPresent(screen);
   SDL_Delay(6000);
   
