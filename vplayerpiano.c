@@ -73,10 +73,22 @@ void gen_key_rects(Keyboard * kbd){
 }
 
 int main(){
+  SDL_Window * win;
+  SDL_Renderer * screen;
   Keyboard kbd;
   
   keyboard_init(&kbd);
+  SDL_Init(SDL_INIT_VIDEO);
+  
+  win = SDL_CreateWindow("vplayerpiano", SDL_WINDOWPOS_CENTERED, 
+                         SDL_WINDOWPOS_CENTERED, 800, 600, NULL);
+  if (!win){
+    printf("Failed to open window!\n");
+  }
   
   printf("Hello\n\n");
+  
+  SDL_DestroyWindow(win);
+  SDL_Quit();
   return 0;
 }
