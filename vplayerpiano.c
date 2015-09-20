@@ -50,17 +50,17 @@ void gen_key_rects(Keyboard * kbd){
     if (i % 12 == 1 || i % 12 == 6){ //Bb and Eb
       kbd->key_rects[i].h = black_height;
       kbd->key_rects[i].w = black_width;
-      kbd->key_rects[i].x = offset - kbd->key_width / 6;
+      kbd->key_rects[i].x = offset - kbd->key_width / 3;
       kbd->key_rects[i].y = 0;
     } else if (i % 12 == 4 || i % 12 == 9){ //Db and Gb
       kbd->key_rects[i].h = black_height;
       kbd->key_rects[i].w = black_width;
-      kbd->key_rects[i].x = offset - 1 / 2 * kbd->key_width;
+      kbd->key_rects[i].x = offset - kbd->key_width * 3 / 8;
       kbd->key_rects[i].y = 0;
     } else if (i % 12 == 11){ //Ab
       kbd->key_rects[i].h = black_height;
       kbd->key_rects[i].w = black_width;
-      kbd->key_rects[i].x = offset - 1 / 3 * kbd->key_width;
+      kbd->key_rects[i].x = offset - kbd->key_width / 3;
       kbd->key_rects[i].y = 0;
     } else { //white notes
       kbd->key_rects[i].h = kbd->key_height;
