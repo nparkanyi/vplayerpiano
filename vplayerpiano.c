@@ -18,7 +18,9 @@
 #include <SDL.h>
 #include <stdio.h>
 
-#define DEFAULT_KEY_WIDTH 14
+#define DEFAULT_KEY_WIDTH 16
+#define RES_X 832
+#define RES_Y 96 
 
 typedef struct {
   int key_width; //width (including gap) of a white key in pixels
@@ -81,21 +83,21 @@ int main(){
   SDL_Window * win;
   SDL_Renderer * screen;
   Keyboard kbd;
-  
+
   keyboard_init(&kbd);
   SDL_Init(SDL_INIT_VIDEO);
-  
-  win = SDL_CreateWindow("vplayerpiano", SDL_WINDOWPOS_CENTERED, 
-                         SDL_WINDOWPOS_CENTERED, 800, 600, NULL);
+
+  win = SDL_CreateWindow("vplayerpiano", SDL_WINDOWPOS_CENTERED,
+                         SDL_WINDOWPOS_CENTERED, RES_X, RES_Y, 0);
   if (!win){
     printf("Failed to open window!\n");
   }
-  
+
   screen = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
   if (!screen){
     printf("Failed to initialize renderer!\n");
   }
-  
+
   //draw keyboard
   SDL_SetRenderDrawColor(screen, 100, 100, 100, 255);
   SDL_RenderClear(screen);
@@ -113,7 +115,7 @@ int main(){
   }
   SDL_RenderPresent(screen);
   SDL_Delay(6000);
-  
+
   SDL_DestroyRenderer(screen);
   SDL_DestroyWindow(win);
   SDL_Quit();
