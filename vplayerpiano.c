@@ -17,10 +17,13 @@
 
 #include <SDL.h>
 #include <stdio.h>
+#include "libmidi/midi.h"
 
+#define MIDI_ERROR(errstr) printf("libmidi: " errstr "\n")
+#define MIDI_ERROR_VARS(errstr, vars) printf("libmidi: " errstr, vars); puts("\n")
 #define DEFAULT_KEY_WIDTH 16
 #define RES_X 832
-#define RES_Y 96 
+#define RES_Y 96
 
 typedef struct {
   int key_width; //width (including gap) of a white key in pixels
@@ -31,7 +34,117 @@ typedef struct {
 
 void keyboard_init(Keyboard * kbd);
 void gen_key_rects(Keyboard * kbd);
+void draw_keyboard(Keyboard * kbd, SDL_Renderer * out);
 int is_black_key(int i);
+
+int main(int argc, char * argv[]){
+  int r;
+  MIDIFile midi;
+  MIDITrack * tracks;
+  MIDIEvent ** ptrs;
+  MIDIEventIterator * iters;
+  long conversion;
+  unsigned long ticks[10] = {0, 0, 0, 0, 0};
+
+  SDL_Window * win;
+  SDL_Renderer * screen;
+  Keyboard kbd;
+
+
+  /*******************
+   * Load MIDI file
+   *******************/
+  r = MIDIFile_load(&midi, argv[1]);
+  switch (r){
+    case FILE_IO_ERROR:
+      MIDI_ERROR("Failed to open file!");
+      return 1;
+    case FILE_INVALID:
+      MIDI_ERROR("Invalid MIDI file!");
+      return 1;
+  }
+
+  tracks = malloc(sizeof(MIDITrack) * midi.header.num_tracks);
+  ptrs = malloc(sizeof(MIDIEvent*) * midi.header.num_tracks);
+  iters = malloc(sizeof(MIDIEventIterator) * midi.header.num_tracks);
+  for (int i = 0; i < midi.header.num_tracks; i++){
+    r = MIDITrack_load(&tracks[i], midi.file);
+    switch(r){
+      case FILE_INVALID:
+        MIDI_ERROR_VARS("Track %d: Invalid data!", i);
+        break;
+      case FILE_IO_ERROR:
+        MIDI_ERROR_VARS("Track %d: File IO problem!", i);
+        break;
+      case MEMORY_ERROR:
+        MIDI_ERROR("Failed to allocate memory!");
+        break;
+    }
+  }
+
+  conversion = 60000 / (120 * midi.header.time_div);
+
+  for (int i = 0; i < midi.header.num_tracks; i++){
+    iters[i] = MIDIEventList_get_start_iter(tracks[i].list);
+    if (!iters[i].node){
+      MIDI_ERROR_VARS("Track %d failed to load!", i);
+    }
+  }
+
+
+  /**************************
+   * Set up graphical output
+   **************************/
+  keyboard_init(&kbd);
+  kbd.key_states[50] = 1;
+  kbd.key_states[49] = 1;
+  SDL_Init(SDL_INIT_VIDEO);
+
+  win = SDL_CreateWindow("vplayerpiano", SDL_WINDOWPOS_CENTERED,
+                         SDL_WINDOWPOS_CENTERED, RES_X, RES_Y, 0);
+  if (!win){
+    printf("Failed to open window!\n");
+  }
+
+  screen = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
+  if (!screen){
+    printf("Failed to initialize renderer!\n");
+  }
+
+  while(1){
+    for (int i = 0; i < midi.header.num_tracks; i++){
+      ptrs[i] = MIDIEventList_get_event(iters[i]);
+      if (ptrs[i]->type == EV_NOTE_ON && ptrs[i]->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
+        if (((MIDIChannelEventData*)(ptrs[i]->data))->param2){
+          kbd.key_states[((MIDIChannelEventData*)(ptrs[i]->data))->param1 - 33] = 1;
+        } else {
+          kbd.key_states[((MIDIChannelEventData*)(ptrs[i]->data))->param1 - 33] = 0;
+        }
+        iters[i] = MIDIEventList_next_event(iters[i]);
+        ticks[i] = SDL_GetTicks();
+      } else if (ptrs[i]->type == EV_NOTE_OFF && ptrs[i]->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
+        kbd.key_states[((MIDIChannelEventData*)(ptrs[i]->data))->param1 - 33] = 0;
+        iters[i] = MIDIEventList_next_event(iters[i]);
+        ticks[i] = SDL_GetTicks();
+      } else if (ptrs[i]->type != EV_NOTE_OFF && ptrs[i]->type != EV_NOTE_ON /*&&
+                                                                       ptr->delta_time * conversion <= SDL_GetTicks() - ticks*/){
+        iters[i] = MIDIEventList_next_event(iters[i]);
+        ticks[i] = SDL_GetTicks();
+      }
+    }
+    draw_keyboard(&kbd, screen);
+    SDL_RenderPresent(screen);
+  }
+
+  SDL_DestroyRenderer(screen);
+  SDL_DestroyWindow(win);
+  SDL_Quit();
+  for (int i = 0; i < midi.header.num_tracks; i++){
+    MIDITrack_delete_events(&tracks[i]);
+  }
+  fclose(midi.file);
+  return 0;
+}
 
 void keyboard_init(Keyboard * kbd){
   kbd->key_width = DEFAULT_KEY_WIDTH;
@@ -74,50 +187,34 @@ void gen_key_rects(Keyboard * kbd){
   }
 }
 
-int is_black_key(int i){
-  return (i % 12 == 1 || i % 12 == 4 || i % 12 == 6 || i % 12 == 9
-      || i % 12 == 11);
-}
-
-int main(){
-  SDL_Window * win;
-  SDL_Renderer * screen;
-  Keyboard kbd;
-
-  keyboard_init(&kbd);
-  SDL_Init(SDL_INIT_VIDEO);
-
-  win = SDL_CreateWindow("vplayerpiano", SDL_WINDOWPOS_CENTERED,
-                         SDL_WINDOWPOS_CENTERED, RES_X, RES_Y, 0);
-  if (!win){
-    printf("Failed to open window!\n");
-  }
-
-  screen = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
-  if (!screen){
-    printf("Failed to initialize renderer!\n");
-  }
-
+void draw_keyboard(Keyboard * kbd, SDL_Renderer * out)
+{
   //draw keyboard
-  SDL_SetRenderDrawColor(screen, 100, 100, 100, 255);
-  SDL_RenderClear(screen);
+  SDL_SetRenderDrawColor(out, 100, 100, 100, 255);
+  SDL_RenderClear(out);
   for (int i = 0; i < 88; i++){
     if (!is_black_key(i)){
-      SDL_SetRenderDrawColor(screen, 255, 255, 255, 255);
-      SDL_RenderFillRect(screen, &kbd.key_rects[i]);
+      if (kbd->key_states[i]){
+        SDL_SetRenderDrawColor(out, 200, 30, 30, 255);
+      } else {
+        SDL_SetRenderDrawColor(out, 255, 255, 255, 255);
+      }
+      SDL_RenderFillRect(out, &kbd->key_rects[i]);
     }
   }
   for (int i = 0; i < 88; i++){
     if (is_black_key(i)){
-      SDL_SetRenderDrawColor(screen, 0, 0, 0, 255);
-      SDL_RenderFillRect(screen, &kbd.key_rects[i]);
+      if (kbd->key_states[i]){
+        SDL_SetRenderDrawColor(out, 30, 200, 30, 255);
+      } else {
+        SDL_SetRenderDrawColor(out, 0, 0, 0, 255);
+      }
+      SDL_RenderFillRect(out, &kbd->key_rects[i]);
     }
   }
-  SDL_RenderPresent(screen);
-  SDL_Delay(6000);
+}
 
-  SDL_DestroyRenderer(screen);
-  SDL_DestroyWindow(win);
-  SDL_Quit();
-  return 0;
+int is_black_key(int i){
+  return (i % 12 == 1 || i % 12 == 4 || i % 12 == 6 || i % 12 == 9
+      || i % 12 == 11);
 }
