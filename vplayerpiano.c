@@ -96,8 +96,6 @@ int main(int argc, char * argv[]){
    * Set up graphical output
    **************************/
   keyboard_init(&kbd);
-  kbd.key_states[50] = 1;
-  kbd.key_states[49] = 1;
   SDL_Init(SDL_INIT_VIDEO);
 
   win = SDL_CreateWindow("vplayerpiano", SDL_WINDOWPOS_CENTERED,
