@@ -16,8 +16,12 @@
  */
 
 #include <SDL.h>
-#include <stdio.h>
+#include <cstdio>
+#include <vector>
+extern "C" {
 #include "libmidi/midi.h"
+}
+using namespace std;
 
 #define MIDI_ERROR(errstr) printf("libmidi: " errstr "\n")
 #define MIDI_ERROR_VARS(errstr, vars) printf("libmidi: " errstr, vars); puts("\n")
@@ -42,11 +46,11 @@ int is_black_key(int i);
 int main(int argc, char * argv[]){
   int r;
   MIDIFile midi;
-  MIDITrack * tracks;
-  MIDIEvent ** ptrs;
-  MIDIEventIterator * iters;
+  vector<MIDITrack> tracks;
+  MIDIEvent * mid_ev;
+  vector<MIDIEventIterator> iters;
   long conversion;
-  unsigned long ticks[10] = {0, 0, 0, 0, 0};
+  vector<unsigned long> ticks;
   SDL_Event ev;
 
   SDL_Window * win;
@@ -67,11 +71,9 @@ int main(int argc, char * argv[]){
       return 1;
   }
 
-  tracks = malloc(sizeof(MIDITrack) * midi.header.num_tracks);
-  ptrs = malloc(sizeof(MIDIEvent*) * midi.header.num_tracks);
-  iters = malloc(sizeof(MIDIEventIterator) * midi.header.num_tracks);
   for (int i = 0; i < midi.header.num_tracks; i++){
-    r = MIDITrack_load(&tracks[i], midi.file);
+    MIDITrack tmp_trk;
+    r = MIDITrack_load(&tmp_trk, midi.file);
     switch(r){
       case FILE_INVALID:
         MIDI_ERROR_VARS("Track %d: Invalid data!", i);
@@ -83,14 +85,16 @@ int main(int argc, char * argv[]){
         MIDI_ERROR("Failed to allocate memory!");
         break;
     }
+    tracks.push_back(tmp_trk);
+    ticks.push_back(0);
   }
 
   conversion = 60000 / (120 * midi.header.time_div);
 
   for (int i = 0; i < midi.header.num_tracks; i++){
-    iters[i] = MIDIEventList_get_start_iter(tracks[i].list);
-    if (!iters[i].node){
-      MIDI_ERROR_VARS("Track %d failed to load!", i);
+    iters.push_back(MIDIEventList_get_start_iter(tracks[i].list));
+    if (iters.size() < i + 1 || !iters[i].node){
+      MIDI_ERROR_VARS("Track %d: failed to load start iter!", i);
     }
   }
 
@@ -114,20 +118,20 @@ int main(int argc, char * argv[]){
 
   while(1){
     for (int i = 0; i < midi.header.num_tracks; i++){
-      ptrs[i] = MIDIEventList_get_event(iters[i]);
-      if (ptrs[i]->type == EV_NOTE_ON && ptrs[i]->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
-        if (((MIDIChannelEventData*)(ptrs[i]->data))->param2){
-          kbd.key_states[((MIDIChannelEventData*)(ptrs[i]->data))->param1 - 33] = 1;
+      mid_ev = MIDIEventList_get_event(iters[i]);
+      if (mid_ev->type == EV_NOTE_ON && mid_ev->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
+        if (((MIDIChannelEventData*)(mid_ev->data))->param2){
+          kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 1;
         } else {
-          kbd.key_states[((MIDIChannelEventData*)(ptrs[i]->data))->param1 - 33] = 0;
+          kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 0;
         }
         iters[i] = MIDIEventList_next_event(iters[i]);
         ticks[i] = SDL_GetTicks();
-      } else if (ptrs[i]->type == EV_NOTE_OFF && ptrs[i]->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
-        kbd.key_states[((MIDIChannelEventData*)(ptrs[i]->data))->param1 - 33] = 0;
+      } else if (mid_ev->type == EV_NOTE_OFF && mid_ev->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
+        kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 0;
         iters[i] = MIDIEventList_next_event(iters[i]);
         ticks[i] = SDL_GetTicks();
-      } else if (ptrs[i]->type != EV_NOTE_OFF && ptrs[i]->type != EV_NOTE_ON /*&&
+      } else if (mid_ev->type != EV_NOTE_OFF && mid_ev->type != EV_NOTE_ON /*&&
                                                                        ptr->delta_time * conversion <= SDL_GetTicks() - ticks*/){
         iters[i] = MIDIEventList_next_event(iters[i]);
         ticks[i] = SDL_GetTicks();
