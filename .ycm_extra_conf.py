@@ -35,8 +35,8 @@ import ycm_core
 
 flags = [
     '-x',
-    'c',
-    '-std=c99',
+    'c++',
+    '-std=c++11',
     '-I',
     '/usr/include/glib-2.0',
     '-I',
