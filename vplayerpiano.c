@@ -32,6 +32,8 @@ typedef struct {
   SDL_Rect key_rects[88];
 } Keyboard;
 
+int process_event(SDL_Event * ev);
+
 void keyboard_init(Keyboard * kbd);
 void gen_key_rects(Keyboard * kbd);
 void draw_keyboard(Keyboard * kbd, SDL_Renderer * out);
@@ -45,6 +47,7 @@ int main(int argc, char * argv[]){
   MIDIEventIterator * iters;
   long conversion;
   unsigned long ticks[10] = {0, 0, 0, 0, 0};
+  SDL_Event ev;
 
   SDL_Window * win;
   SDL_Renderer * screen;
@@ -131,6 +134,15 @@ int main(int argc, char * argv[]){
       }
     }
     draw_keyboard(&kbd, screen);
+
+    int quit = 0;
+    while (SDL_PollEvent(&ev)){
+      if (!process_event(&ev)){
+        quit = 1;
+      }
+    }
+    if (quit) { break; }
+
     SDL_RenderPresent(screen);
   }
 
@@ -216,3 +228,12 @@ int is_black_key(int i){
   return (i % 12 == 1 || i % 12 == 4 || i % 12 == 6 || i % 12 == 9
       || i % 12 == 11);
 }
+
+int process_event(SDL_Event * ev)
+{
+  if (ev->type == SDL_KEYUP && ev->key.keysym.sym == SDLK_ESCAPE){
+    return 0;
+  }
+  return 1;
+}
+
