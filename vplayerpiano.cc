@@ -16,6 +16,7 @@
  */
 
 #include <SDL.h>
+#include <fluidsynth.h>
 #include <cstdio>
 #include <vector>
 extern "C" {
@@ -51,11 +52,16 @@ int main(int argc, char * argv[]){
   vector<MIDIEventIterator> iters;
   long conversion;
   vector<unsigned long> ticks;
-  SDL_Event ev;
 
+  SDL_Event ev;
   SDL_Window * win;
   SDL_Renderer * screen;
   Keyboard kbd;
+
+  fluid_settings_t * settings;
+  fluid_synth_t * synth;
+  fluid_audio_driver_t *adriver;
+  int sfHandle;
 
 
   /*******************
@@ -116,33 +122,51 @@ int main(int argc, char * argv[]){
     printf("Failed to initialize renderer!\n");
   }
 
+
+  /*****************************
+   * Initialize fluidsynth stuff
+   * **************************/
+  settings = new_fluid_settings();
+  synth = new_fluid_synth(settings);
+  fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
+  adriver = new_fluid_audio_driver(settings, synth);
+  sfHandle = fluid_synth_sfload(synth, "font.sf2", 1);
+  fluid_synth_bank_select(synth, 0, 0);
+
+  unsigned long current_ticks;
   while(1){
+    current_ticks = SDL_GetTicks();
     for (int i = 0; i < midi.header.num_tracks; i++){
       mid_ev = MIDIEventList_get_event(iters[i]);
-      if (mid_ev->type == EV_NOTE_ON && mid_ev->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
-        if (((MIDIChannelEventData*)(mid_ev->data))->param2){
-          kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 1;
-        } else {
+      printf("Track #: %d, Event type: %x\n", i, mid_ev->type);
+      printf("delta time: %d, current_ticks: %d\n", mid_ev->delta_time, current_ticks - ticks[i]);
+      if (mid_ev->delta_time * conversion <= current_ticks - ticks[i]){
+        printf("process event\n");
+        if (mid_ev->type == EV_NOTE_ON){
+          if (((MIDIChannelEventData*)(mid_ev->data))->param2){
+            kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 1;
+            fluid_synth_noteon(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1,
+                ((MIDIChannelEventData*)(mid_ev->data))->param2);
+          } else {
+            kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 0;
+            fluid_synth_noteoff(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1);
+          }
+        } else if (mid_ev->type == EV_NOTE_OFF){
           kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 0;
+          fluid_synth_noteoff(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1);
         }
         iters[i] = MIDIEventList_next_event(iters[i]);
-        ticks[i] = SDL_GetTicks();
-      } else if (mid_ev->type == EV_NOTE_OFF && mid_ev->delta_time * conversion <= SDL_GetTicks() - ticks[i]){
-        kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 0;
-        iters[i] = MIDIEventList_next_event(iters[i]);
-        ticks[i] = SDL_GetTicks();
-      } else if (mid_ev->type != EV_NOTE_OFF && mid_ev->type != EV_NOTE_ON /*&&
-                                                                       ptr->delta_time * conversion <= SDL_GetTicks() - ticks*/){
-        iters[i] = MIDIEventList_next_event(iters[i]);
-        ticks[i] = SDL_GetTicks();
+        mid_ev = MIDIEventList_get_event(iters[i]);
+        printf("event type: %x\n", mid_ev->type);
+        ticks[i] = current_ticks;
       }
     }
     draw_keyboard(&kbd, screen);
 
-    int quit = 0;
+    bool quit = false;
     while (SDL_PollEvent(&ev)){
       if (!process_event(&ev)){
-        quit = 1;
+        quit = true;
       }
     }
     if (quit) { break; }
@@ -153,6 +177,12 @@ int main(int argc, char * argv[]){
   SDL_DestroyRenderer(screen);
   SDL_DestroyWindow(win);
   SDL_Quit();
+
+  fluid_synth_sfunload(synth, sfHandle, 0);
+  delete_fluid_audio_driver(adriver);
+  delete_fluid_synth(synth);
+  delete_fluid_settings(settings);
+
   for (int i = 0; i < midi.header.num_tracks; i++){
     MIDITrack_delete_events(&tracks[i]);
   }
