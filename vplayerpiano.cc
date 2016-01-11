@@ -133,6 +133,7 @@ int main(int argc, char * argv[]){
   sfHandle = fluid_synth_sfload(synth, "font.sf2", 1);
   fluid_synth_bank_select(synth, 0, 0);
 
+
   unsigned long current_ticks;
   while(1){
     current_ticks = SDL_GetTicks();
@@ -157,8 +158,7 @@ int main(int argc, char * argv[]){
         }
         iters[i] = MIDIEventList_next_event(iters[i]);
         mid_ev = MIDIEventList_get_event(iters[i]);
-        printf("event type: %x\n", mid_ev->type);
-        ticks[i] = current_ticks;
+        ticks[i] = SDL_GetTicks();
       }
     }
     draw_keyboard(&kbd, screen);
