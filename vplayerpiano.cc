@@ -134,25 +134,13 @@ int main(int argc, char * argv[]){
   fluid_synth_bank_select(synth, 0, 0);
 
 
-  mid_ev = MIDIEventList_get_event(iters[2]);
-  while (mid_ev->type != META_END_TRACK){
-    printf("**EVENT TYPE: %x\n", mid_ev->type);
-    iters[2] = MIDIEventList_next_event(iters[2]);
-    mid_ev = MIDIEventList_get_event(iters[2]);
-  }
-  iters[2] = MIDIEventList_get_start_iter(tracks[2].list);
-
   unsigned long current_ticks;
   while(1){
     current_ticks = SDL_GetTicks();
     for (int i = 0; i < midi.header.num_tracks; i++){
       mid_ev = MIDIEventList_get_event(iters[i]);
-      printf("Track #: %d, Event type: %x\n", i, mid_ev->type);
-      printf("delta time: %d, current_ticks: %d\n", mid_ev->delta_time * conversion, current_ticks - ticks[i]);
       if (mid_ev->delta_time * conversion <= current_ticks - ticks[i]){
-        printf("process event\n");
         if (mid_ev->type == EV_NOTE_ON){
-          printf("NOTE EVENT\n");
           if (((MIDIChannelEventData*)(mid_ev->data))->param2){
             kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 1;
             fluid_synth_noteon(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1,
@@ -162,7 +150,6 @@ int main(int argc, char * argv[]){
             fluid_synth_noteoff(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1);
           }
         } else if (mid_ev->type == EV_NOTE_OFF){
-          printf("NOTE EVENT\n");
           kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 0;
           fluid_synth_noteoff(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1);
         }
