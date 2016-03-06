@@ -152,6 +152,8 @@ int main(int argc, char * argv[]){
         } else if (mid_ev->type == EV_NOTE_OFF){
           kbd.key_states[((MIDIChannelEventData*)(mid_ev->data))->param1 - 33] = 0;
           fluid_synth_noteoff(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1);
+        } else if (mid_ev->type == META_TEMPO_CHANGE){
+          conversion = *(guint32*)(mid_ev->data) / (1000 * midi.header.time_div);
         }
         iters[i] = MIDIEventList_next_event(iters[i]);
         ticks[i] = SDL_GetTicks();
