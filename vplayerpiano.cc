@@ -96,6 +96,7 @@ int main(int argc, char * argv[]){
   }
 
   conversion = MIDIHeader_getTempoConversion(&midi.header, 500000);
+  printf("conversion: %f\n", conversion);
 
   for (int i = 0; i < midi.header.num_tracks; i++){
     iters.push_back(MIDIEventList_get_start_iter(tracks[i].list));
@@ -154,7 +155,10 @@ int main(int argc, char * argv[]){
           fluid_synth_noteoff(synth, 0, ((MIDIChannelEventData*)(mid_ev->data))->param1);
         } else if (mid_ev->type == META_TEMPO_CHANGE){
           printf("tempo change\n");
-          conversion = *(guint32*)(mid_ev->data) / (1000 * midi.header.time_div);
+         conversion = MIDIHeader_getTempoConversion(&midi.header, 500000);
+         /*conversion = MIDIHeader_getTempoConversion(&midi.header,
+                                                     *(guint32*)(mid_ev->data));
+          printf("conversion: %f\n", conversion); */
         }
         iters[i] = MIDIEventList_next_event(iters[i]);
         ticks[i] = SDL_GetTicks();
